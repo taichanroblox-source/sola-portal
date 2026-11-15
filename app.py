@@ -142,7 +142,7 @@ def open_chat():
 
 @app.get("/talk")
 def open_talk():
-    address = os.environ.get("SOLA_TALK_URL", "").strip()
+    address = os.environ.get("SOLA_TALK_URL", "https://sola-talk.onrender.com/").strip()
     if not valid_url(address):
         return render_template("service_pending.html", page="services", service_name="SOLA TALK"), 503
     session["recent_service"] = "talk"
