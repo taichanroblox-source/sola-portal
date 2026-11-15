@@ -1,7 +1,7 @@
 import os
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
@@ -13,6 +13,8 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///sola_portal.db").replace("postgres://", "postgresql+psycopg://", 1).replace("postgresql://", "postgresql+psycopg://", 1)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("HTTPS_ONLY", "1") == "1"
@@ -231,6 +233,7 @@ def register():
             db.session.commit()
             session.clear()
             session["uid"] = account.id
+            session.permanent = True
             session["csrf"] = secrets.token_urlsafe(32)
             flash("登録できたよ。", "ok")
             return redirect(url_for("home"))
