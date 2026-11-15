@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_sqlalchemy import SQLAlchemy
+from download_service import download_bp
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
@@ -19,6 +20,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("HTTPS_ONLY", "1") == "1"
 db = SQLAlchemy(app)
+app.register_blueprint(download_bp, url_prefix="/download")
 
 
 def now():
@@ -113,7 +115,7 @@ def inject():
 
 @app.before_request
 def csrf_check():
-    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+    if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.endpoint not in ("sola_download.info",):
         submitted = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
         if not secrets.compare_digest(submitted or "", session.get("csrf", "")):
             abort(400)
@@ -153,11 +155,8 @@ def open_talk():
 
 @app.get("/download")
 def open_download():
-    address = os.environ.get("SOLA_DOWNLOAD_URL", "https://sola-download.onrender.com/").strip()
-    if not valid_url(address):
-        return render_template("service_pending.html", page="services", service_name="SOLA DOWNLOAD"), 503
     session["recent_service"] = "download"
-    return redirect(address, code=302)
+    return render_template("download.html")
 
 
 @app.get("/services")
