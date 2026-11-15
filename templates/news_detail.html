@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<a class="back" href="{{ url_for('news_page') }}">← お知らせ一覧</a><article class="panel"><span class="eyebrow">{{ item.category|upper }}</span><h1>{{ item.title }}</h1><p class="muted">{{ item.published_at.strftime('%Y年%m月%d日') }}</p><div class="articlebody">{{ item.body }}</div></article>{% endblock %}
