@@ -131,6 +131,24 @@ def home():
     return render_template("index.html", page="home", services=services, news=news)
 
 
+@app.get("/chat")
+def open_chat():
+    address = os.environ.get("SOLA_CHAT_URL", "https://sola-chat-web.onrender.com")
+    if not valid_url(address):
+        abort(503)
+    session["recent_service"] = "chat"
+    return redirect(address, code=302)
+
+
+@app.get("/talk")
+def open_talk():
+    address = os.environ.get("SOLA_TALK_URL", "").strip()
+    if not valid_url(address):
+        return render_template("service_pending.html", page="services", service_name="SOLA TALK"), 503
+    session["recent_service"] = "talk"
+    return redirect(address, code=302)
+
+
 @app.get("/services")
 def services_page():
     return render_template("services.html", page="services", services=Service.query.filter_by(published=True).order_by(Service.position, Service.id).all())
@@ -139,9 +157,15 @@ def services_page():
 @app.get("/go/<int:service_id>")
 def go(service_id):
     service = db.get_or_404(Service, service_id)
-    if not service.published or not valid_url(service.url):
+    if not service.published:
         abort(404)
     session["recent_service"] = service.id
+    if service.name == "SOLA CHAT":
+        return redirect(url_for("open_chat"))
+    if service.name == "SOLA TALK":
+        return redirect(url_for("open_talk"))
+    if not valid_url(service.url):
+        abort(404)
     return redirect(service.url)
 
 
@@ -296,8 +320,8 @@ with app.app_context():
     db.create_all()
     if not Service.query.first():
         db.session.add_all([
-            Service(name="SOLA CHAT", description="メッセージやグループでつながろう", url=os.environ.get("SOLA_CHAT_URL", "https://sola-chat-web.onrender.com"), icon="chat", position=0),
-            Service(name="SOLA TALK", description="音声とビデオで会話しよう", url=os.environ.get("SOLA_TALK_URL", "https://example.com"), icon="video", position=1, published=bool(os.environ.get("SOLA_TALK_URL"))),
+            Service(name="SOLA CHAT", description="メッセージやグループでつながろう", url="/chat", icon="chat", position=0),
+            Service(name="SOLA TALK", description="音声とビデオで会話しよう", url="/talk", icon="video", position=1, published=True),
         ])
         db.session.commit()
     owner_name = os.environ.get("PORTAL_OWNER_USERNAME", "")
