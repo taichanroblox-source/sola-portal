@@ -223,8 +223,8 @@ def register():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        if not re.fullmatch(r"[A-Za-z0-9_]{3,30}", username) or len(password) < 8:
-            flash("ユーザー名は英数字と_で3〜30文字、パスワードは8文字以上にしてね。", "error")
+        if not re.fullmatch(r"[A-Za-z0-9_]{3,30}", username) or len(password) < 6:
+            flash("ユーザー名は英数字と_で3〜30文字、パスワードは6文字以上にしてね。", "error")
         elif User.query.filter_by(username=username).first():
             flash("そのユーザー名は使われているよ。", "error")
         else:
