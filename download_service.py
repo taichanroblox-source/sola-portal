@@ -5,7 +5,7 @@ import json
 import time
 import zipfile
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse, quote
 
 import requests
@@ -18,9 +18,17 @@ CACHE_LOCK = threading.Lock()
 CACHE_TTL = 300
 MAX_ASSETS = 1000
 MAX_ASSET_BYTES = 30 * 1024 * 1024
+ZIP_CACHE = {}
+ZIP_CACHE_LOCK = threading.Lock()
+ZIP_CACHE_TTL = 600
+ZIP_CACHE_MAX_BYTES = 60 * 1024 * 1024
+THREAD_LOCAL = threading.local()
 
 def fetch(url, timeout=20):
-    r = requests.get(url, headers=HEADERS, timeout=timeout)
+    if not hasattr(THREAD_LOCAL, "session"):
+        THREAD_LOCAL.session = requests.Session()
+        THREAD_LOCAL.session.headers.update(HEADERS)
+    r = THREAD_LOCAL.session.get(url, timeout=timeout)
     r.raise_for_status()
     return r
 
@@ -81,6 +89,16 @@ def download(pid):
     if not pid.isdigit():
         return jsonify(error="無効な作品IDだよ。"), 400
     try:
+        with ZIP_CACHE_LOCK:
+            cached = ZIP_CACHE.get(pid)
+            if cached and time.monotonic() - cached[0] < ZIP_CACHE_TTL:
+                payload, title = cached[1], cached[2]
+                return Response(payload, headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Disposition": f"attachment; filename*=UTF-8''{quote(title + '.sb3')}",
+                    "Content-Length": str(len(payload)), "Cache-Control": "no-store"
+                })
+        started = time.monotonic()
         md = metadata(pid)
         token = md.get("project_token") or ""
         url = f"https://projects.scratch.mit.edu/{pid}"
@@ -99,11 +117,22 @@ def download(pid):
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as z:
             z.writestr("project.json", data)
-            with ThreadPoolExecutor(max_workers=8) as pool:
-                for name, content in pool.map(get_asset, sorted(assets)):
+            with ThreadPoolExecutor(max_workers=12) as pool:
+                futures = [pool.submit(get_asset, name) for name in sorted(assets)]
+                for future in as_completed(futures):
+                    name, content = future.result()
                     z.writestr(name, content)
         title = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", md.get("title") or f"Scratch-{pid}").strip(" .")[:100] or f"Scratch-{pid}"
         payload = buf.getvalue()
+        if len(payload) <= ZIP_CACHE_MAX_BYTES:
+            with ZIP_CACHE_LOCK:
+                for key in list(ZIP_CACHE):
+                    if time.monotonic() - ZIP_CACHE[key][0] >= ZIP_CACHE_TTL:
+                        ZIP_CACHE.pop(key, None)
+                if len(ZIP_CACHE) >= 3:
+                    ZIP_CACHE.pop(next(iter(ZIP_CACHE)))
+                ZIP_CACHE[pid] = (time.monotonic(), payload, title)
+        print(f"SOLA Scratch built project {pid}: {len(assets)} assets, {len(payload)} bytes, {time.monotonic()-started:.2f}s", flush=True)
         return Response(payload, headers={
             "Content-Type": "application/octet-stream",
             "Content-Disposition": f"attachment; filename*=UTF-8''{quote(title + '.sb3')}",
