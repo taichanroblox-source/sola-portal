@@ -207,6 +207,7 @@ def register():
             db.session.commit()
             session.clear()
             session["uid"] = account.id
+            session["csrf"] = secrets.token_urlsafe(32)
             flash("登録できたよ。", "ok")
             return redirect(url_for("home"))
     return render_template("auth.html", page="profile", mode="register")
@@ -221,6 +222,7 @@ def login():
         else:
             session.clear()
             session["uid"] = account.id
+            session["csrf"] = secrets.token_urlsafe(32)
             return redirect(url_for("home"))
     return render_template("auth.html", page="profile", mode="login")
 
