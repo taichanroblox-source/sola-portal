@@ -151,6 +151,15 @@ def open_talk():
     return redirect(address, code=302)
 
 
+@app.get("/download")
+def open_download():
+    address = os.environ.get("SOLA_DOWNLOAD_URL", "https://sola-download.onrender.com/").strip()
+    if not valid_url(address):
+        return render_template("service_pending.html", page="services", service_name="SOLA DOWNLOAD"), 503
+    session["recent_service"] = "download"
+    return redirect(address, code=302)
+
+
 @app.get("/services")
 def services_page():
     return render_template("services.html", page="services", services=Service.query.filter_by(published=True).order_by(Service.position, Service.id).all())
@@ -166,6 +175,8 @@ def go(service_id):
         return redirect(url_for("open_chat"))
     if service.name == "SOLA TALK":
         return redirect(url_for("open_talk"))
+    if service.name == "SOLA DOWNLOAD":
+        return redirect(url_for("open_download"))
     if not valid_url(service.url):
         abort(404)
     return redirect(service.url)
@@ -338,6 +349,13 @@ with app.app_context():
         talk_service.published = True
     else:
         db.session.add(Service(name="SOLA TALK", description="音声とビデオで会話しよう", url="/talk", icon="video", position=1, published=True))
+    download_service = Service.query.filter_by(name="SOLA DOWNLOAD").first()
+    if download_service:
+        download_service.url = "/download"
+        download_service.health_url = "https://sola-download.onrender.com/health"
+        download_service.published = True
+    else:
+        db.session.add(Service(name="SOLA DOWNLOAD", description="Scratch作品の保存と画像ファイル変換", url="/download", health_url="https://sola-download.onrender.com/health", icon="download", position=2, published=True))
     db.session.commit()
     owner_name = os.environ.get("PORTAL_OWNER_USERNAME", "")
     owner_pass = os.environ.get("PORTAL_OWNER_PASSWORD", "")
