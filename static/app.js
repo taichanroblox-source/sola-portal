@@ -1,3 +1,17 @@
+// Show the launch animation once per browser tab, without delaying later navigation.
+(function(){
+  const splash=document.getElementById("sola-splash");
+  if(!splash)return;
+  const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(sessionStorage.getItem("sola-splash-seen")||reduced)return;
+  sessionStorage.setItem("sola-splash-seen","1");
+  splash.hidden=false;
+  splash.classList.add("splash-show");
+  window.setTimeout(()=>{
+    splash.classList.add("splash-leave");
+    window.setTimeout(()=>{splash.hidden=true;splash.remove()},450);
+  },1400);
+})();
 const body=document.body;
 const theme=localStorage.getItem("sola-theme")||"sunset";
 body.dataset.theme=theme;
