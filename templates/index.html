@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block content %}
+<section class="hero"><span class="eyebrow">WELCOME TO SOLA</span><h1><span id="greeting">こんにちは</span>、<br>つながる世界へ。</h1><p>話したいときも、つながりたいときも。SOLAのすべてを、ここから。</p><a class="heroaction" href="{{ url_for('services_page') }}">サービスを見る ↗</a><div class="heroorb"></div></section>
+<div class="sectionhead"><div><span class="eyebrow">EXPLORE</span><h2>サービス</h2></div><a href="{{ url_for('services_page') }}">すべて見る →</a></div>
+<div class="servicegrid">{% for s in services %}<a class="servicecard" href="{{ url_for('go',service_id=s.id) }}"><div class="serviceicon">{{ '◉' if s.icon=='chat' else ('▣' if s.icon=='video' else '✦') }}</div><div class="servicebody"><h3>{{ s.name }}</h3><p>{{ s.description }}</p></div><span class="arrow">↗</span></a>{% else %}<p>公開中のサービスはまだありません。</p>{% endfor %}</div>
+<div id="recent" class="recent" hidden><div class="sectionhead"><h2>最近利用したサービス</h2></div><a id="recentlink"></a></div>
+<div class="sectionhead"><div><span class="eyebrow">LATEST</span><h2>お知らせ</h2></div><a href="{{ url_for('news_page') }}">一覧を見る →</a></div><div class="newslist">{% for n in news %}<a class="newsrow" href="{{ url_for('news_detail',news_id=n.id) }}"><span class="category">{{ {'general':'一般','update':'アップデート','maintenance':'メンテナンス','incident':'障害情報'}[n.category] }}</span><span>{{ n.title }}{% if n.important %} <b class="important">重要</b>{% endif %}</span><span class="date">{{ n.published_at.strftime('%Y.%m.%d') }}</span></a>{% else %}<div class="empty">現在お知らせはありません。</div>{% endfor %}</div>
+{% endblock %}
