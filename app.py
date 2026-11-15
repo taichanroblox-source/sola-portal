@@ -324,6 +324,18 @@ with app.app_context():
             Service(name="SOLA TALK", description="音声とビデオで会話しよう", url="/talk", icon="video", position=1, published=True),
         ])
         db.session.commit()
+    # Keep the initial service entries in sync across existing databases.
+    chat_service = Service.query.filter_by(name="SOLA CHAT").first()
+    if chat_service:
+        chat_service.url = "/chat"
+        chat_service.published = True
+    talk_service = Service.query.filter_by(name="SOLA TALK").first()
+    if talk_service:
+        talk_service.url = "/talk"
+        talk_service.published = True
+    else:
+        db.session.add(Service(name="SOLA TALK", description="音声とビデオで会話しよう", url="/talk", icon="video", position=1, published=True))
+    db.session.commit()
     owner_name = os.environ.get("PORTAL_OWNER_USERNAME", "")
     owner_pass = os.environ.get("PORTAL_OWNER_PASSWORD", "")
     if owner_name and owner_pass and len(owner_pass) >= 12:
